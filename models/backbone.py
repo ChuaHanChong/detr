@@ -70,7 +70,7 @@ class BackboneBase(nn.Module):
         self.num_channels = num_channels
 
     def forward(self, tensor_list: NestedTensor):
-        xs = self.body(tensor_list.tensors)
+        xs = self.body(tensor_list.tensors)  # (B, 3, H, W) -> (B, 2048, H/32, W/32)
         out: Dict[str, NestedTensor] = {}
         for name, x in xs.items():
             m = tensor_list.mask
@@ -98,7 +98,7 @@ class Joiner(nn.Sequential):
         super().__init__(backbone, position_embedding)
 
     def forward(self, tensor_list: NestedTensor):
-        xs = self[0](tensor_list)
+        xs = self[0](tensor_list)  # (B, 3, H, W) -> (B, 2048, H/32, W/32)
         out: List[NestedTensor] = []
         pos = []
         for name, x in xs.items():
@@ -106,7 +106,7 @@ class Joiner(nn.Sequential):
             # position encoding
             pos.append(self[1](x).to(x.tensors.dtype))
 
-        return out, pos
+        return out, pos  # [(B, 2048, H/32, W/32)], [(B, 256, H/32, W/32)]
 
 
 def build_backbone(args):
