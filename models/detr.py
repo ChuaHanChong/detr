@@ -58,14 +58,16 @@ class DETR(nn.Module):
         """
         if isinstance(samples, (list, torch.Tensor)):
             samples = nested_tensor_from_tensor_list(samples)
-        features, pos = self.backbone(samples)
+        features, pos = self.backbone(samples)  # [(B, 2048, H/32, W/32)], [(B, 256, H/32, W/32)]
 
-        src, mask = features[-1].decompose()
+        src, mask = features[-1].decompose()  # (B, 2048, H/32, W/32), (B, H/32, W/32)
         assert mask is not None
-        hs = self.transformer(self.input_proj(src), mask, self.query_embed.weight, pos[-1])[0]
-
-        outputs_class = self.class_embed(hs)
-        outputs_coord = self.bbox_embed(hs).sigmoid()
+        # self.input_proj(src) -> (B, 256, H/32, W/32) 
+        # pos[-1] -> (B, 256, H/32, W/32)
+        hs = self.transformer(self.input_proj(src), mask, self.query_embed.weight, pos[-1])[0]  # (6, B, 100, 256)
+        
+        outputs_class = self.class_embed(hs)  # (6, B, 100, num_classes+1)
+        outputs_coord = self.bbox_embed(hs).sigmoid()  # (6, B, 100, 4)
         out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
         if self.aux_loss:
             out['aux_outputs'] = self._set_aux_loss(outputs_class, outputs_coord)
